@@ -1,0 +1,65 @@
+services:
+  mysql:
+    container_name: mysql
+    image: mysql:latest
+    restart: on-failure
+    ports:
+      - "3306:3306"
+    env_file:
+      - .env
+    volumes:
+      - "db:/var/lib/mysql-db"
+    networks:
+      - cloud1-network
+  phpmyadmin:
+    container_name: phpmyadmin
+    image: phpmyadmin:latest
+    restart: on-failure
+    ports:
+      - "8080:80"
+    env_file:
+      - .env
+    depends_on:
+      - mysql
+    networks:
+      - cloud1-network
+  nginx:
+    container_name: nginx
+    image: nginx:latest
+    restart: on-failure
+    ports:
+      - "443:443"
+    volumes:
+      - "wordpress:/var/www/html"
+    networks:
+      - cloud1-network
+  wordpress:
+    container_name: wordpress
+    image: wordpress:latest
+    restart: on-failure
+    env_file:
+      - .env
+    volumes:
+      - "wordpress:/var/www/html"
+    depends_on:
+      - mysql
+    networks:
+      - cloud1-network
+
+volumes:
+  db:
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/ykhadiri/data/db
+      o: bind
+  wordpress:
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/ykhadiri/data/wordpress
+      o: bind
+
+networks:
+  cloud1-network:
+    driver: bridge
