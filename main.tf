@@ -1,7 +1,9 @@
 locals {
   directories = [
     "/home/ykhadiri/data/db",
-    "/home/ykhadiri/data/wordpress"
+    "/home/ykhadiri/data/wordpress",
+    # "./ssl/certs", 
+    # "./ssl/private"
   ]
 }
 
@@ -71,7 +73,6 @@ resource "null_resource" "wp_init" {
 }
 
 
-# Add a destroy provisioner to tear down the environment when needed
 # provisioner "local-exec" {
 #   when    = destroy
 #   command = "docker-compose -f ${path.module}/docker-compose.yml down"

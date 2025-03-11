@@ -31,8 +31,11 @@ services:
       - 443:443
     volumes:
       - "wordpress:/var/www/html"
-      - "./nginx/nginx.conf:/etc/nginx/"
       - "./nginx/tools/nginx-init.sh:/tmp/nginx-init.sh"
+      - "./nginx/nginx.conf:/etc/nginx/conf.d/nginx.conf"
+      # - "./nginx/nginx.conf:/etc/nginx/nginx.conf"
+      - "./nginx/ssl/certificate.crt:/etc/nginx/ssl/certificate.crt"
+      - "./nginx/ssl/private.key:/etc/nginx/ssl/private.key"
     networks:
       - cloud1-network
   wordpress:
