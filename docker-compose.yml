@@ -23,16 +23,18 @@ services:
       - mysql
     networks:
       - cloud1-network
-  # nginx:
-  #   image: nginx
-  #   container_name: nginx
-  #   restart: always
-  #   ports:
-  #     - 443:443
-  #   volumes:
-  #     - "wordpress:/var/www/html"
-  #   networks:
-  #     - cloud1-network
+  nginx:
+    image: nginx
+    container_name: nginx
+    restart: always
+    ports:
+      - 443:443
+    volumes:
+      - "wordpress:/var/www/html"
+      - "./nginx/nginx.conf:/etc/nginx/"
+      - "./nginx/tools/nginx-init.sh:/tmp/nginx-init.sh"
+    networks:
+      - cloud1-network
   wordpress:
     image: wordpress
     container_name: wordpress

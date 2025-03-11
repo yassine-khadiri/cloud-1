@@ -32,6 +32,25 @@ resource "null_resource" "docker_compose" {
   depends_on = [ null_resource.create_directories ]
 }
 
+resource "null_resource" "nginx" {
+    provisioner "local-exec" {
+     command = <<EOT
+      echo "Waiting for nginx container to be ready..."
+      sleep 30
+      
+      # Check if nginx container is running
+      if docker ps | grep -q nginx; then
+        echo "nginx container is running, executing initialization script..."
+        docker exec nginx bash /tmp/nginx-init.sh
+      else
+        echo "nginx container is not running. Please check your docker-compose configuration."
+        exit 1
+      fi
+    EOT
+  }
+  depends_on = [ null_resource.docker_compose ]
+}
+
 resource "null_resource" "wp_init" {
   provisioner "local-exec" {
      command = <<EOT
@@ -50,6 +69,7 @@ resource "null_resource" "wp_init" {
   }
   depends_on = [ null_resource.docker_compose ]
 }
+
 
 # Add a destroy provisioner to tear down the environment when needed
 # provisioner "local-exec" {
