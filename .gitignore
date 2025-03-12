@@ -41,4 +41,4 @@ Pipfile.lock
 
 .env
 
-./ssl
+/ssl
