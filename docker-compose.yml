@@ -31,19 +31,40 @@ services:
       - 443:443
     volumes:
       - "wordpress:/var/www/html"
-      - "./nginx/tools/nginx-init.sh:/tmp/nginx-init.sh"
-      - "./nginx/nginx.conf:/etc/nginx/conf.d/nginx.conf"
-      # - "./nginx/nginx.conf:/etc/nginx/nginx.conf"
-      - "./nginx/ssl/certificate.crt:/etc/nginx/ssl/certificate.crt"
-      - "./nginx/ssl/private.key:/etc/nginx/ssl/private.key"
+      - "./nginx/default.conf:/etc/nginx/conf.d/default.conf"
+      - "./ssl/certs/certificate.crt:/etc/nginx/ssl/certificate.crt"
+      - "./ssl/private/private.key:/etc/nginx/ssl/private.key"
     networks:
       - cloud1-network
+  # php-fpm:
+  #   image: php:8.2-fpm
+  #   container_name: php-fpm
+  #   restart: always
+  #   volumes:
+  #   - "wordpress:/var/www/html"
+  #   networks:
+  #   - cloud1-network
+  # wordpress:
+  #   image: wordpress
+  #   container_name: wordpress
+  #   restart: always
+  #   ports:
+  #     - 9000:9000
+  #   env_file:
+  #     - .env
+  #   volumes:
+  #     - "wordpress:/var/www/html"
+  #     - "./wordpress/tools/wp-init.sh:/tmp/wp-init.sh"
+  #   depends_on:
+  #     - mysql
+  #   networks:
+  #     - cloud1-network
   wordpress:
-    image: wordpress
+    image: wordpress:php8.2-fpm
     container_name: wordpress
     restart: always
-    ports:
-      - 8080:80
+    expose:
+      - 9000
     env_file:
       - .env
     volumes:

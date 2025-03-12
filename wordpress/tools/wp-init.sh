@@ -32,4 +32,8 @@ if [  -f /var/www/html/wp-config.php ]; then
 
     wp user create --allow-root $WORDPRESS_DB_USER $WORDPRESS_DB_USER_MAIL --user_pass=$WORDPRESS_DB_USER
 
+    # chmod 777 /var/www/html/wp-content/plugins
+    # chmod 777 /var/www/html/wp-content/themes
+    wp theme install --allow-root astra --activate
+
 fi

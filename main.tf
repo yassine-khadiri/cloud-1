@@ -2,8 +2,8 @@ locals {
   directories = [
     "/home/ykhadiri/data/db",
     "/home/ykhadiri/data/wordpress",
-    # "./ssl/certs", 
-    # "./ssl/private"
+    "./ssl/certs", 
+    "./ssl/private"
   ]
 }
 
@@ -24,6 +24,18 @@ terraform {
   }
 }
 
+resource "null_resource" "generate_ssl_certificates" {
+  provisioner "local-exec" {
+    command = <<EOT
+      openssl req -newkey rsa:2048 -x509 -nodes -days 365 \
+        -keyout ./ssl/private/private.key \
+        -out ./ssl/certs/certificate.crt \
+        -subj "/C=MO/ST=KO/L=KO/O=42/CN=42.fr"
+    EOT
+  }
+  depends_on = [null_resource.create_directories] 
+}
+
 resource "null_resource" "docker_compose" {
   provisioner "local-exec" {
     command = "docker-compose up -d"
@@ -31,26 +43,7 @@ resource "null_resource" "docker_compose" {
   triggers = {
     docker_compose_sha = filesha256("docker-compose.yml")
   }
-  depends_on = [ null_resource.create_directories ]
-}
-
-resource "null_resource" "nginx" {
-    provisioner "local-exec" {
-     command = <<EOT
-      echo "Waiting for nginx container to be ready..."
-      sleep 30
-      
-      # Check if nginx container is running
-      if docker ps | grep -q nginx; then
-        echo "nginx container is running, executing initialization script..."
-        docker exec nginx bash /tmp/nginx-init.sh
-      else
-        echo "nginx container is not running. Please check your docker-compose configuration."
-        exit 1
-      fi
-    EOT
-  }
-  depends_on = [ null_resource.docker_compose ]
+  depends_on = [ null_resource.create_directories,null_resource.generate_ssl_certificates ]
 }
 
 resource "null_resource" "wp_init" {
