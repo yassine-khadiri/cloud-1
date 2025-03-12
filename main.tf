@@ -65,7 +65,6 @@ resource "null_resource" "wp_init" {
   depends_on = [ null_resource.docker_compose ]
 }
 
-
 # provisioner "local-exec" {
 #   when    = destroy
 #   command = "docker-compose -f ${path.module}/docker-compose.yml down"
