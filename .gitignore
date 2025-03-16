@@ -42,3 +42,5 @@ Pipfile.lock
 .env
 
 /ssl
+
+cloud.pem

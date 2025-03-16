@@ -29,7 +29,7 @@ terraform {
 }
 
 provider "aws" {
-  region  = "us-west-2"
+  region  = "eu-north-1"
   profile = "default"
 }
 
@@ -43,6 +43,25 @@ resource "tls_private_key" "rsa_4096" {
 resource "aws_key_pair" "key_pair" {
   key_name   = var.key_name
   public_key = tls_private_key.rsa_4096.public_key_openssh
+}
+
+# Save private key locally
+resource "local_file" "private_key" {
+  content  = tls_private_key.rsa_4096.private_key_pem
+  filename = "${var.key_name}.pem"
+
+  provisioner "local-exec" {
+    command = "chmod 400 ${var.key_name}.pem"
+  }
+}
+
+resource "aws_instance" "cloud_1_instance" {
+  ami           = "ami-09a9858973b288bdd"
+  instance_type = "t3.micro"
+
+  tags = {
+    Name = "cloud_1_instance"
+  }
 }
 
 resource "null_resource" "generate_ssl_certificates" {
