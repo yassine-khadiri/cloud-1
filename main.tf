@@ -19,7 +19,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 4.16"
+      version = "~> 5.0"
     }
     docker = {
       source  = "kreuzwerker/docker"
@@ -58,9 +58,40 @@ resource "local_file" "private_key" {
 resource "aws_instance" "cloud_1_instance" {
   ami           = "ami-09a9858973b288bdd"
   instance_type = "t3.micro"
+  key_name      = aws_key_pair.key_pair.key_name
 
   tags = {
     Name = "cloud_1_instance"
+  }
+
+  connection {
+    type        = "ssh"
+    user        = "ubuntu"
+    private_key = file("${var.key_name}.pem")
+    host        = self.public_ip
+  }
+
+  provisioner "file" {
+    source = "nginx/"
+    destination = "/home/ubuntu/nginx"
+    
+  }
+
+  provisioner "file" {
+    source      = "docker-compose.yml"
+    destination = "/home/ubuntu/docker-compose.yml"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "sudo apt update -y",
+      "sudo apt upgrade -y",
+      "sudo apt install docker.io -y",
+      "sudo systemctl start docker",
+      "sudo usermod -a -G docker $USER",
+      "sudo curl -SL https://github.com/docker/compose/releases/download/v2.33.1/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose",
+      "sudo chmod +x /usr/local/bin/docker-compose",
+    ]
   }
 }
 
