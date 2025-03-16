@@ -2,7 +2,7 @@ locals {
   directories = [
     "/home/ykhadiri/data/db",
     "/home/ykhadiri/data/wordpress",
-    "./ssl/certs", 
+    "./ssl/certs",
     "./ssl/private"
   ]
 }
@@ -17,11 +17,32 @@ resource "null_resource" "create_directories" {
 
 terraform {
   required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 4.16"
+    }
     docker = {
       source  = "kreuzwerker/docker"
       version = "~> 3.0.1"
     }
   }
+}
+
+provider "aws" {
+  region  = "us-west-2"
+  profile = "default"
+}
+
+variable "key_name" {}
+
+resource "tls_private_key" "rsa_4096" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+
+resource "aws_key_pair" "key_pair" {
+  key_name   = var.key_name
+  public_key = tls_private_key.rsa_4096.public_key_openssh
 }
 
 resource "null_resource" "generate_ssl_certificates" {
@@ -33,7 +54,7 @@ resource "null_resource" "generate_ssl_certificates" {
         -subj "/C=MO/ST=KO/L=KO/O=42/CN=42.fr"
     EOT
   }
-  depends_on = [null_resource.create_directories] 
+  depends_on = [null_resource.create_directories]
 }
 
 resource "null_resource" "docker_compose" {
@@ -43,12 +64,12 @@ resource "null_resource" "docker_compose" {
   triggers = {
     docker_compose_sha = filesha256("docker-compose.yml")
   }
-  depends_on = [ null_resource.create_directories,null_resource.generate_ssl_certificates ]
+  depends_on = [null_resource.create_directories, null_resource.generate_ssl_certificates]
 }
 
 resource "null_resource" "wp_init" {
   provisioner "local-exec" {
-     command = <<EOT
+    command = <<EOT
       echo "Waiting for WordPress container to be ready..."
       sleep 30
       
@@ -62,7 +83,7 @@ resource "null_resource" "wp_init" {
       fi
     EOT
   }
-  depends_on = [ null_resource.docker_compose ]
+  depends_on = [null_resource.docker_compose]
 }
 
 # provisioner "local-exec" {

@@ -1,6 +1,5 @@
 #!/bin/sh
 
-# sed -i 's/max_execution_time = 30/max_execution_time = 300/' /etc/php/7.3/fpm/php.ini
 if [  -f /var/www/html/wp-config.php ]; then
     curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
 
@@ -32,8 +31,6 @@ if [  -f /var/www/html/wp-config.php ]; then
 
     wp user create --allow-root $WORDPRESS_DB_USER $WORDPRESS_DB_USER_MAIL --user_pass=$WORDPRESS_DB_USER
 
-    # chmod 777 /var/www/html/wp-content/plugins
-    # chmod 777 /var/www/html/wp-content/themes
     wp theme install --allow-root astra --activate
 
 fi
