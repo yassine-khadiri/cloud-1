@@ -21,10 +21,6 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
-    # docker = {
-    #   source  = "kreuzwerker/docker"
-    #   version = "~> 3.0.1"
-    # }
   }
 }
 
@@ -89,6 +85,10 @@ resource "aws_instance" "cloud_1_instance" {
     ]
   }
 
+  provisioner "local-exec" {
+    command = "echo \"DOMAIN_NAME=${self.public_ip}\" >> .env"
+  }
+
   provisioner "file" {
     source      = "nginx"
     destination = "/home/ubuntu"
@@ -133,15 +133,6 @@ resource "null_resource" "docker_compose" {
     host        = aws_instance.cloud_1_instance.public_ip
   }
 
-  provisioner "file" {
-    source      = "nginx"
-    destination = "/home/ubuntu"
-  }
-
-  provisioner "file" {
-    source      = "wordpress"
-    destination = "/home/ubuntu"
-  }
   provisioner "remote-exec" {
     inline = ["docker-compose up -d"]
   }
@@ -158,6 +149,7 @@ resource "null_resource" "wp_init" {
     private_key = file("${var.key_name}.pem")
     host        = aws_instance.cloud_1_instance.public_ip
   }
+
   provisioner "remote-exec" {
     inline = [
       "echo Waiting for WordPress container to be ready...",
@@ -174,19 +166,6 @@ resource "null_resource" "wp_init" {
   depends_on = [null_resource.docker_compose]
 }
 
-
-
-# resource "null_resource" "generate_ssl_certificates" {
-#   provisioner "local-exec" {
-#     command = <<EOT
-#       openssl req -newkey rsa:2048 -x509 -nodes -days 365 \
-#         -keyout ./ssl/private/private.key \
-#         -out ./ssl/certs/certificate.crt \
-#         -subj "/C=MO/ST=KO/L=KO/O=42/CN=42.fr"
-#     EOT
-#   }
-#   depends_on = [null_resource.create_directories]
-# }
 
 
 
