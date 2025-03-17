@@ -80,13 +80,13 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: /home/ykhadiri/data/db
+      device: /home/ubuntu/data/db
       o: bind
   wordpress:
     driver: local
     driver_opts:
       type: none
-      device: /home/ykhadiri/data/wordpress
+      device: /home/ubuntu/data/wordpress
       o: bind
 
 networks:

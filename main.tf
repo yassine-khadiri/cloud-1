@@ -1,19 +1,19 @@
-locals {
-  directories = [
-    "/home/ykhadiri/data/db",
-    "/home/ykhadiri/data/wordpress",
-    "./ssl/certs",
-    "./ssl/private"
-  ]
-}
+# locals {
+#   directories = [
+#     "/home/ykhadiri/data/db",
+#     "/home/ykhadiri/data/wordpress",
+#     "./ssl/certs",
+#     "./ssl/private"
+#   ]
+# }
 
-resource "null_resource" "create_directories" {
-  for_each = toset(local.directories)
+# resource "null_resource" "create_directories" {
+#   for_each = toset(local.directories)
 
-  provisioner "local-exec" {
-    command = "mkdir -p ${each.value}"
-  }
-}
+#   provisioner "local-exec" {
+#     command = "mkdir -p ${each.value}"
+#   }
+# }
 
 terraform {
   required_providers {
@@ -21,10 +21,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
-    docker = {
-      source  = "kreuzwerker/docker"
-      version = "~> 3.0.1"
-    }
+    # docker = {
+    #   source  = "kreuzwerker/docker"
+    #   version = "~> 3.0.1"
+    # }
   }
 }
 
@@ -71,19 +71,14 @@ resource "aws_instance" "cloud_1_instance" {
     host        = self.public_ip
   }
 
-  provisioner "file" {
-    source = "nginx/"
-    destination = "/home/ubuntu/nginx"
-    
-  }
-
-  provisioner "file" {
-    source      = "docker-compose.yml"
-    destination = "/home/ubuntu/docker-compose.yml"
-  }
-
   provisioner "remote-exec" {
     inline = [
+      "sudo mkdir -p /home/ubuntu/data/db",
+      "sudo mkdir -p /home/ubuntu/data/wordpress",
+      "sudo mkdir -p /home/ubuntu/ssl/certs",
+      "sudo mkdir -p /home/ubuntu/ssl/private",
+      "sudo chown -R ubuntu:ubuntu /home/ubuntu/ssl",
+      "sudo chmod -R 755 /home/ubuntu/ssl",
       "sudo apt update -y",
       "sudo apt upgrade -y",
       "sudo apt install docker.io -y",
@@ -93,48 +88,138 @@ resource "aws_instance" "cloud_1_instance" {
       "sudo chmod +x /usr/local/bin/docker-compose",
     ]
   }
+
+  provisioner "file" {
+    source      = "nginx"
+    destination = "/home/ubuntu"
+  }
+
+  provisioner "file" {
+    source      = "wordpress"
+    destination = "/home/ubuntu"
+  }
+
+  provisioner "file" {
+    source      = ".env"
+    destination = "/home/ubuntu/.env"
+  }
+
+  provisioner "file" {
+    source      = "docker-compose.yml"
+    destination = "/home/ubuntu/docker-compose.yml"
+  }
 }
 
 resource "null_resource" "generate_ssl_certificates" {
-  provisioner "local-exec" {
-    command = <<EOT
-      openssl req -newkey rsa:2048 -x509 -nodes -days 365 \
-        -keyout ./ssl/private/private.key \
-        -out ./ssl/certs/certificate.crt \
-        -subj "/C=MO/ST=KO/L=KO/O=42/CN=42.fr"
-    EOT
+  connection {
+    type        = "ssh"
+    user        = "ubuntu"
+    private_key = file("${var.key_name}.pem")
+    host        = aws_instance.cloud_1_instance.public_ip
   }
-  depends_on = [null_resource.create_directories]
+  provisioner "remote-exec" {
+    inline = [
+      "openssl req -newkey rsa:2048 -x509 -nodes -days 365 -keyout ./ssl/private/private.key -out ./ssl/certs/certificate.crt -subj \"/C=MO/ST=KO/L=KO/O=42/CN=42.fr\""
+    ]
+  }
+  depends_on = [aws_instance.cloud_1_instance]
 }
 
 resource "null_resource" "docker_compose" {
-  provisioner "local-exec" {
-    command = "docker-compose up -d"
+  connection {
+    type        = "ssh"
+    user        = "ubuntu"
+    private_key = file("${var.key_name}.pem")
+    host        = aws_instance.cloud_1_instance.public_ip
+  }
+
+  provisioner "file" {
+    source      = "nginx"
+    destination = "/home/ubuntu"
+  }
+
+  provisioner "file" {
+    source      = "wordpress"
+    destination = "/home/ubuntu"
+  }
+  provisioner "remote-exec" {
+    inline = ["docker-compose up -d"]
   }
   triggers = {
     docker_compose_sha = filesha256("docker-compose.yml")
   }
-  depends_on = [null_resource.create_directories, null_resource.generate_ssl_certificates]
+  depends_on = [aws_instance.cloud_1_instance, null_resource.generate_ssl_certificates]
 }
 
 resource "null_resource" "wp_init" {
-  provisioner "local-exec" {
-    command = <<EOT
-      echo "Waiting for WordPress container to be ready..."
-      sleep 30
-      
-      # Check if WordPress container is running
-      if docker ps | grep -q wordpress; then
-        echo "WordPress container is running, executing initialization script..."
-        docker exec wordpress bash /tmp/wp-init.sh
-      else
-        echo "WordPress container is not running. Please check your docker-compose configuration."
-        exit 1
-      fi
-    EOT
+  connection {
+    type        = "ssh"
+    user        = "ubuntu"
+    private_key = file("${var.key_name}.pem")
+    host        = aws_instance.cloud_1_instance.public_ip
+  }
+  provisioner "remote-exec" {
+    inline = [
+      "echo Waiting for WordPress container to be ready...",
+      "sleep 30",
+      "if docker ps | grep -q wordpress; then",
+      "  echo WordPress container is running, executing initialization script...",
+      "  docker exec wordpress bash /tmp/wp-init.sh",
+      "else",
+      "  echo WordPress container is not running. Please check your docker-compose configuration.",
+      "  exit 1",
+      "fi"
+    ]
   }
   depends_on = [null_resource.docker_compose]
 }
+
+
+
+# resource "null_resource" "generate_ssl_certificates" {
+#   provisioner "local-exec" {
+#     command = <<EOT
+#       openssl req -newkey rsa:2048 -x509 -nodes -days 365 \
+#         -keyout ./ssl/private/private.key \
+#         -out ./ssl/certs/certificate.crt \
+#         -subj "/C=MO/ST=KO/L=KO/O=42/CN=42.fr"
+#     EOT
+#   }
+#   depends_on = [null_resource.create_directories]
+# }
+
+
+
+# resource "null_resource" "wp_init" {
+#   provisioner "remote-exec" {
+
+#     inline = [
+#       "echo Waiting for WordPress container to be ready...",
+#       "sleep 30",
+#       "if docker ps | grep -q wordpress; then",
+#       "  echo WordPress container is running, executing initialization script...",
+#       "  docker exec wordpress bash /tmp/wp-init.sh",
+#       "else",
+#       "  echo WordPress container is not running. Please check your docker-compose configuration.",
+#       "  exit 1",
+#       "fi"
+#     ]
+# command = <<EOT
+#   echo "Waiting for WordPress container to be ready..."
+#   sleep 30
+
+#   # Check if WordPress container is running
+#   if docker ps | grep -q wordpress; then
+#     echo "WordPress container is running, executing initialization script..."
+#     docker exec wordpress bash /tmp/wp-init.sh
+#   else
+#     echo "WordPress container is not running. Please check your docker-compose configuration."
+#     exit 1
+#   fi
+# EOT
+# }
+# depends_on = [null_resource.docker_compose]
+# }
 
 # provisioner "local-exec" {
 #   when    = destroy
