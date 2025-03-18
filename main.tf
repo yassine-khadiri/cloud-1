@@ -1,20 +1,3 @@
-# locals {
-#   directories = [
-#     "/home/ykhadiri/data/db",
-#     "/home/ykhadiri/data/wordpress",
-#     "./ssl/certs",
-#     "./ssl/private"
-#   ]
-# }
-
-# resource "null_resource" "create_directories" {
-#   for_each = toset(local.directories)
-
-#   provisioner "local-exec" {
-#     command = "mkdir -p ${each.value}"
-#   }
-# }
-
 terraform {
   required_providers {
     aws = {
@@ -86,21 +69,16 @@ resource "aws_instance" "cloud_1_instance" {
   }
 
   provisioner "local-exec" {
-    command = "echo \"DOMAIN_NAME=${self.public_ip}\" >> .env"
+    command = "echo \"DOMAIN_NAME=${self.public_ip}\" >> ./content/.env"
   }
 
   provisioner "file" {
-    source      = "nginx"
+    source      = "content"
     destination = "/home/ubuntu"
   }
 
   provisioner "file" {
-    source      = "wordpress"
-    destination = "/home/ubuntu"
-  }
-
-  provisioner "file" {
-    source      = ".env"
+    source      = "content/.env"
     destination = "/home/ubuntu/.env"
   }
 
@@ -166,41 +144,9 @@ resource "null_resource" "wp_init" {
   depends_on = [null_resource.docker_compose]
 }
 
-
-
-
-# resource "null_resource" "wp_init" {
-#   provisioner "remote-exec" {
-
-#     inline = [
-#       "echo Waiting for WordPress container to be ready...",
-#       "sleep 30",
-#       "if docker ps | grep -q wordpress; then",
-#       "  echo WordPress container is running, executing initialization script...",
-#       "  docker exec wordpress bash /tmp/wp-init.sh",
-#       "else",
-#       "  echo WordPress container is not running. Please check your docker-compose configuration.",
-#       "  exit 1",
-#       "fi"
-#     ]
-# command = <<EOT
-#   echo "Waiting for WordPress container to be ready..."
-#   sleep 30
-
-#   # Check if WordPress container is running
-#   if docker ps | grep -q wordpress; then
-#     echo "WordPress container is running, executing initialization script..."
-#     docker exec wordpress bash /tmp/wp-init.sh
-#   else
-#     echo "WordPress container is not running. Please check your docker-compose configuration."
-#     exit 1
-#   fi
-# EOT
-# }
-# depends_on = [null_resource.docker_compose]
-# }
-
-# provisioner "local-exec" {
-#   when    = destroy
-#   command = "docker-compose -f ${path.module}/docker-compose.yml down"
-# }
+resource "null_resource" "destroy" {
+  provisioner "local-exec" {
+    when    = destroy
+    command = "sed -i '/DOMAIN_NAME/d' ./content/.env"
+  }
+}

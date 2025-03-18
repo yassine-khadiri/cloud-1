@@ -1,6 +1,6 @@
 services:
   mysql:
-    image: mysql
+    image: mysql:8.0-oracle
     container_name: mysql
     restart: always
     ports:
@@ -24,43 +24,20 @@ services:
     networks:
       - cloud1-network
   nginx:
-    image: nginx
+    image: nginx:1.25-alpine
     container_name: nginx
     restart: always
     ports:
       - 443:443
     volumes:
       - "wordpress:/var/www/html"
-      - "./nginx/default.conf:/etc/nginx/conf.d/default.conf"
+      - "./content/nginx/default.conf:/etc/nginx/conf.d/default.conf"
       - "./ssl/certs/certificate.crt:/etc/nginx/ssl/certificate.crt"
       - "./ssl/private/private.key:/etc/nginx/ssl/private.key"
     networks:
       - cloud1-network
-  # php-fpm:
-  #   image: php:8.2-fpm
-  #   container_name: php-fpm
-  #   restart: always
-  #   volumes:
-  #   - "wordpress:/var/www/html"
-  #   networks:
-  #   - cloud1-network
-  # wordpress:
-  #   image: wordpress
-  #   container_name: wordpress
-  #   restart: always
-  #   ports:
-  #     - 9000:9000
-  #   env_file:
-  #     - .env
-  #   volumes:
-  #     - "wordpress:/var/www/html"
-  #     - "./wordpress/tools/wp-init.sh:/tmp/wp-init.sh"
-  #   depends_on:
-  #     - mysql
-  #   networks:
-  #     - cloud1-network
   wordpress:
-    image: wordpress:php8.2-fpm
+    image: wordpress:6.3-php8.2-fpm-alpine
     container_name: wordpress
     restart: always
     expose:
@@ -69,7 +46,7 @@ services:
       - .env
     volumes:
       - "wordpress:/var/www/html"
-      - "./wordpress/tools/wp-init.sh:/tmp/wp-init.sh"
+      - "./content/wordpress/tools/wp-init.sh:/tmp/wp-init.sh"
     depends_on:
       - mysql
     networks:
