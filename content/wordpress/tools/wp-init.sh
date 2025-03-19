@@ -1,14 +1,15 @@
 #!/bin/sh
 
-WP_CLI = /usr/local/bin/wp
+# WP_CLI = /usr/local/bin/wp
 
 if [ ! -f /var/www/html/wp-config.php ]; then
     cp wp-config-sample.php wp-config.php
 fi
 
-if [ ! -f $WP_CLI ]; then
-    curl https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -o $WP_CLI
-    chmod +x $WP_CLI
+wp_cli_path="/usr/local/bin/wp"
+if [ ! -f "$wp_cli_path" ]; then
+    curl -o "$wp_cli_path" https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+    chmod +x "$wp_cli_path"
 fi
 
 chmod 777 /var/www/html
@@ -17,8 +18,8 @@ wp config set --allow-root DB_NAME $WORDPRESS_DB_NAME
 wp config set --allow-root DB_USER $WORDPRESS_DB_USER
 wp config set --allow-root DB_PASSWORD $WORDPRESS_DB_PASSWORD
 wp config set --allow-root DB_HOST $WORDPRESS_DB_HOST
-wp config set --allow-root WP_HOME $DOMAIN_NAME
-wp config set --allow-root WP_SITEURL $DOMAIN_NAME
+wp config set --allow-root WP_HOME "http://$DOMAIN_NAME"
+wp config set --allow-root WP_SITEURL "http://$DOMAIN_NAME"
 
 # Check if WordPress is already installed
 if ! wp core is-installed --allow-root; then

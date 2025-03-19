@@ -59,7 +59,6 @@ resource "aws_instance" "cloud_1_instance" {
       "sudo chown -R ubuntu:ubuntu /home/ubuntu/ssl",
       "sudo chmod -R 755 /home/ubuntu/ssl",
       "sudo apt update -y",
-      "sudo apt upgrade -y",
       "sudo apt install docker.io -y",
       "sudo systemctl start docker",
       "sudo usermod -a -G docker $USER",
@@ -144,9 +143,9 @@ resource "null_resource" "wp_init" {
   depends_on = [null_resource.docker_compose]
 }
 
-resource "null_resource" "destroy" {
-  provisioner "local-exec" {
-    when    = destroy
-    command = "sed -i '/DOMAIN_NAME/d' ./content/.env"
-  }
-}
+# resource "null_resource" "destroy" {
+#   provisioner "local-exec" {
+#     when    = destroy
+#     command = "sed -i '/DOMAIN_NAME/d' ./content/.env"
+#   }
+# }
