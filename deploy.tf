@@ -226,3 +226,7 @@ resource "null_resource" "nginx_setup" {
   depends_on = [null_resource.deploy, null_resource.wp_setup]
 }
 
+# print the public IP address when the deployment is complete
+output "public_ip" {
+  value = aws_instance.ubuntu_server.public_ip
+}
