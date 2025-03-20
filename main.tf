@@ -141,9 +141,15 @@ resource "null_resource" "wp_init" {
   depends_on = [null_resource.docker_compose]
 }
 
-# resource "null_resource" "destroy" {
-#   provisioner "local-exec" {
-#     when    = destroy
-#     command = "sed -i '/DOMAIN_NAME/d' ./content/.env"
-#   }
-# }
+resource "null_resource" "cleanup" {
+  triggers = {
+    instance_id = aws_instance.cloud_1_instance.id
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = "sed -i '/DOMAIN_NAME=/d' ./content/.env"
+  }
+
+  depends_on = [aws_instance.cloud_1_instance]
+}
