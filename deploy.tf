@@ -168,7 +168,7 @@ resource "null_resource" "add_ip" {
       # Use the Terraform variable for public IP
       "export ip=${aws_instance.ubuntu_server.public_ip}",
       "echo \"DOMAIN_NAME=$ip\" >> .env",
-      "sed -i \"s/server_name IP;/server_name $ip;/g\" ./nginx/default.conf"
+      "sed -i \"s/server_name IP;/server_name $ip;/g\" ./nginx/conf/default.conf"
     ]
   }
   depends_on = [null_resource.copy_directories]
@@ -200,31 +200,31 @@ resource "null_resource" "wp_setup" {
 }
 
 # Set up the Nginx container
-resource "null_resource" "nginx_setup" {
-  connection {
-    type        = "ssh"
-    user        = "ubuntu"
-    private_key = tls_private_key.rsa-4096.private_key_pem
-    host        = aws_instance.ubuntu_server.public_ip
-  }
+# resource "null_resource" "nginx_setup" {
+#   connection {
+#     type        = "ssh"
+#     user        = "ubuntu"
+#     private_key = tls_private_key.rsa-4096.private_key_pem
+#     host        = aws_instance.ubuntu_server.public_ip
+#   }
 
-  provisioner "remote-exec" {
-    inline = [
-      "echo \"Waiting for Nginx container to be ready...\"",
-      "sleep 30",
-      "if docker ps | grep -q nginx; then",
-      "  echo \"Nginx container is running, executing initialization script...\"",
-      "  docker exec nginx bash /tmp/ng-init.sh",
-      "else",
-      "  echo \"Nginx container is not running. Please check your docker-compose configuration.\"",
-      "  exit 1",
-      "fi"
-    ]
+#   provisioner "remote-exec" {
+#     inline = [
+#       "echo \"Waiting for Nginx container to be ready...\"",
+#       "sleep 30",
+#       "if docker ps | grep -q nginx; then",
+#       "  echo \"Nginx container is running, executing initialization script...\"",
+#       "  docker exec nginx bash /tmp/ng-init.sh",
+#       "else",
+#       "  echo \"Nginx container is not running. Please check your docker-compose configuration.\"",
+#       "  exit 1",
+#       "fi"
+#     ]
 
-  }
+#   }
 
-  depends_on = [null_resource.deploy, null_resource.wp_setup]
-}
+#   depends_on = [null_resource.deploy, null_resource.wp_setup]
+# }
 
 # print the public IP address when the deployment is complete
 output "public_ip" {
