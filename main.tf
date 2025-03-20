@@ -12,8 +12,6 @@ provider "aws" {
   profile = "default"
 }
 
-variable "key_name" {}
-
 resource "tls_private_key" "rsa_4096" {
   algorithm = "RSA"
   rsa_bits  = 4096
