@@ -12,8 +12,6 @@ terraform {
 # Configure the AWS provider
 provider "aws" {
   region = "eu-north-1"
-  # shared_config_files      = ["/home/ymoutaou/.aws/config"]
-  # shared_credentials_files = ["/home/ymoutaou/.aws/credentials"]
   profile = "default"
 }
 
@@ -35,6 +33,10 @@ resource "aws_key_pair" "key_pair" {
 resource "local_file" "tls_private_key" {
   content  = tls_private_key.rsa-4096.private_key_pem
   filename = "cloud_1_key.pem"
+
+  provisioner "local-exec" {
+    command = "chmod 400 cloud_1_key.pem"
+  }
 }
 
 # Create an EC2 instance
