@@ -1,3 +1,5 @@
+# This file contains the Terraform configuration to deploy the application on AWS.
+
 terraform {
   required_providers {
     aws = {
@@ -7,12 +9,15 @@ terraform {
   }
 }
 
+# Configure the AWS provider
 provider "aws" {
-  region                   = "eu-north-1"
-  shared_config_files      = ["/home/ymoutaou/.aws/config"]
-  shared_credentials_files = ["/home/ymoutaou/.aws/credentials"]
+  region = "eu-north-1"
+  # shared_config_files      = ["/home/ymoutaou/.aws/config"]
+  # shared_credentials_files = ["/home/ymoutaou/.aws/credentials"]
+  profile = "default"
 }
 
+# Generate a private key
 resource "tls_private_key" "rsa-4096" {
   algorithm = "RSA"
   rsa_bits  = 4096
@@ -20,73 +25,78 @@ resource "tls_private_key" "rsa-4096" {
 
 # variable "key_name" {}
 
+# generate a key pair
 resource "aws_key_pair" "key_pair" {
   key_name   = "cloud_1_key"
   public_key = tls_private_key.rsa-4096.public_key_openssh
 }
 
+# Save the private key to a file
 resource "local_file" "tls_private_key" {
   content  = tls_private_key.rsa-4096.private_key_pem
   filename = "cloud_1_key.pem"
 }
 
-# resource "aws_security_group" "instance_sg" {
-#   name        = "instance_security_group"
-#   description = "Allow SSH, HTTP, and HTTPS inbound traffic"
-
-#   vpc_id = "vpc-0dfc5f41d0c93a10b"
-
-#   # Allow SSH access from anywhere (or specify a restricted IP range)
-#   ingress {
-#     from_port   = 22
-#     to_port     = 22
-#     protocol    = "tcp"
-#     cidr_blocks = ["0.0.0.0/0"]
-#   }
-
-#   # Allow HTTP (80) access from anywhere
-#   ingress {
-#     from_port   = 80
-#     to_port     = 80
-#     protocol    = "tcp"
-#     cidr_blocks = ["0.0.0.0/0"]
-#   }
-
-#   # Allow HTTPS (443) access from anywhere
-#   ingress {
-#     from_port   = 443
-#     to_port     = 443
-#     protocol    = "tcp"
-#     cidr_blocks = ["0.0.0.0/0"]
-#   }
-
-#   # Allow all outbound traffic (default behavior)
-#   egress {
-#     from_port   = 0
-#     to_port     = 0
-#     protocol    = "-1"
-#     cidr_blocks = ["0.0.0.0/0"]
-#   }
-
-#   tags = {
-#     Name = "cloud_1_sg"
-#   }
-# }
-
-
+# Create an EC2 instance
 resource "aws_instance" "ubuntu_server" {
-  ami                    = "ami-09a9858973b288bdd"
-  instance_type          = "t3.micro"
-  key_name               = aws_key_pair.key_pair.key_name
-  # vpc_security_group_ids = [aws_security_group.instance_sg.id] # Attach SG
+  ami           = "ami-09a9858973b288bdd"
+  instance_type = "t3.micro"
+  key_name      = aws_key_pair.key_pair.key_name
 
   tags = {
     Name = "cloud_1"
   }
 }
 
-resource "null_resource" "install_packages" {
-  depends_on = [aws_instance.ubuntu_server]
+# deploy the application
+resource "null_resource" "deploy" {
+  connection {
+    type        = "ssh"
+    user        = "ubuntu"
+    private_key = tls_private_key.rsa-4096.private_key_pem
+    host        = aws_instance.ubuntu_server.public_ip
+  }
+  provisioner "remote-exec" {
+    inline = [
+      "cd /home/ubuntu/cloud-1",
+      "docker compose up -d"
+    ]
+  }
+
+  triggers = {
+    docker_compose_sha = filesha256("./cloud-1/docker-compose.yml")
+  }
+
+  depends_on = [null_resource.create_directories]
+}
+
+# Create directories
+locals {
+  directories = [
+    "/home/ubuntu/data/db",
+    "/home/ubuntu/data/wordpress",
+  ]
+}
+
+resource "null_resource" "create_directories" {
+  for_each   = toset(local.directories)
+  depends_on = [null_resource.add_ip]
+  connection {
+    type        = "ssh"
+    user        = "ubuntu"
+    private_key = tls_private_key.rsa-4096.private_key_pem
+    host        = aws_instance.ubuntu_server.public_ip
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "mkdir -p ${each.value}"
+    ]
+  }
+}
+
+# Install Docker and Docker Compose
+resource "null_resource" "install_docker" {
 
   connection {
     type        = "ssh"
@@ -123,11 +133,11 @@ resource "null_resource" "install_packages" {
       "echo 'Docker installation completed!'"
     ]
   }
+  depends_on = [aws_instance.ubuntu_server]
 }
 
+# copy directories
 resource "null_resource" "copy_directories" {
-  depends_on = [null_resource.install_packages]
-
   connection {
     type        = "ssh"
     user        = "ubuntu"
@@ -138,10 +148,10 @@ resource "null_resource" "copy_directories" {
     source      = "cloud-1"       # Local directory
     destination = "/home/ubuntu/" # Remote directory
   }
+  depends_on = [null_resource.install_docker]
 }
 
 resource "null_resource" "add_ip" {
-  depends_on = [null_resource.copy_directories]
 
   connection {
     type        = "ssh"
@@ -159,82 +169,17 @@ resource "null_resource" "add_ip" {
       "sed -i \"s/server_name IP;/server_name $ip;/g\" ./nginx/default.conf"
     ]
   }
+  depends_on = [null_resource.copy_directories]
 }
 
-locals {
-  directories = [
-    "/home/ubuntu/data/db",
-    "/home/ubuntu/data/wordpress",
-    # "./ssl/certs",  
-    # "./ssl/private"
-  ]
-}
-
-resource "null_resource" "create_directories" {
-  for_each   = toset(local.directories)
-  depends_on = [null_resource.add_ip]
+# Set up the WordPress container
+resource "null_resource" "wp_setup" {
   connection {
     type        = "ssh"
     user        = "ubuntu"
     private_key = tls_private_key.rsa-4096.private_key_pem
     host        = aws_instance.ubuntu_server.public_ip
   }
-
-  provisioner "remote-exec" {
-    inline = [
-      "mkdir -p ${each.value}"
-    ]
-  }
-}
-
-resource "null_resource" "nginx_init" {
-  provisioner "remote-exec" {
-    # inline = [
-    #   "openssl req -newkey rsa:2048 -x509 -nodes -days 365 -keyout /home/ubuntu/ssl/private/private.key -out /home/ubuntu/ssl/certs/certificate.crt -subj \"/C=MO/ST=KO/L=KO/O=42/CN=42.fr\""
-    # ]
-    inline = [
-      "echo \"Waiting for Nginx container to be ready...\"",
-      "sleep 30",
-      "if docker ps | grep -q nginx; then",
-      "  echo \"Nginx container is running, executing initialization script...\"",
-      "  docker exec nginx bash /tmp/ng-init.sh",
-      "else",
-      "  echo \"Nginx container is not running. Please check your docker-compose configuration.\"",
-      "  exit 1",
-      "fi"
-    ]
-    connection {
-      type        = "ssh"
-      user        = "ubuntu"
-      private_key = tls_private_key.rsa-4096.private_key_pem
-      host        = aws_instance.ubuntu_server.public_ip
-    }
-  }
-
-  depends_on = [null_resource.deploy, null_resource.wp_init]
-}
-
-resource "null_resource" "deploy" {
-  provisioner "remote-exec" {
-    inline = [
-      "cd /home/ubuntu/cloud-1",
-      "docker compose up -d"
-    ]
-    connection {
-      type        = "ssh"
-      user        = "ubuntu"
-      private_key = tls_private_key.rsa-4096.private_key_pem
-      host        = aws_instance.ubuntu_server.public_ip
-    }
-  }
-  triggers = {
-    docker_compose_sha = filesha256("./cloud-1/docker-compose.yml")
-  }
-
-  depends_on = [null_resource.create_directories]
-}
-
-resource "null_resource" "wp_init" {
   provisioner "remote-exec" {
     inline = [
       "echo \"Waiting for WordPress container to be ready...\"",
@@ -248,12 +193,34 @@ resource "null_resource" "wp_init" {
       "  exit 1",
       "fi"
     ]
-    connection {
-      type        = "ssh"
-      user        = "ubuntu"
-      private_key = tls_private_key.rsa-4096.private_key_pem
-      host        = aws_instance.ubuntu_server.public_ip
-    }
   }
   depends_on = [null_resource.deploy]
 }
+
+# Set up the Nginx container
+resource "null_resource" "nginx_setup" {
+  connection {
+    type        = "ssh"
+    user        = "ubuntu"
+    private_key = tls_private_key.rsa-4096.private_key_pem
+    host        = aws_instance.ubuntu_server.public_ip
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "echo \"Waiting for Nginx container to be ready...\"",
+      "sleep 30",
+      "if docker ps | grep -q nginx; then",
+      "  echo \"Nginx container is running, executing initialization script...\"",
+      "  docker exec nginx bash /tmp/ng-init.sh",
+      "else",
+      "  echo \"Nginx container is not running. Please check your docker-compose configuration.\"",
+      "  exit 1",
+      "fi"
+    ]
+
+  }
+
+  depends_on = [null_resource.deploy, null_resource.wp_setup]
+}
+
