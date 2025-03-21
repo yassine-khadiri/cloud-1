@@ -1,0 +1,82 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    restart: always
+    ports:
+      - 3306:3306
+    env_file:
+      - .env
+    volumes:
+      - "db:/var/lib/mysql"
+    networks:
+      - cloud1-network
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: phpmyadmin
+    restart: always
+    ports:
+      - 8081:80
+    env_file:
+      - .env
+    depends_on:
+      - mysql
+    networks:
+      - cloud1-network
+
+  nginx:
+    # image: nginx:cloud1
+    # image: nginx:1.25-bookworm
+    build: nginx/
+    container_name: nginx
+    restart: always
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - "wordpress:/var/www/html"
+      # - "./nginx/default.conf:/tmp/default.conf"
+      # - "./nginx/tools/ng-init.sh:/tmp/ng-init.sh"
+    networks:
+      - cloud1-network
+    depends_on:
+      - wordpress
+    # entrypoint: ["/bin/bash", "-c", "chmod +x /tmp/ng-init.sh && /tmp/ng-init.sh"]
+
+  wordpress:
+    # image: wordpress:cloud1
+    image: wordpress:6.3-php8.2-fpm
+    # build: wordpress/
+    container_name: wordpress
+    restart: always
+    expose:
+      - 9000
+    env_file:
+      - .env
+    volumes:
+      - "wordpress:/var/www/html"
+      - "./wordpress/tools/wp-init.sh:/tmp/wp-init.sh"
+    depends_on:
+      - mysql
+    networks:
+      - cloud1-network
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["chmod +x /tmp/wp-init.sh && /tmp/wp-init.sh"]
+
+volumes:
+  db:
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/$USER/data/db
+      o: bind
+  wordpress:
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/$USER/data/wordpress
+      o: bind
+
+networks:
+  cloud1-network:
+    driver: bridge
