@@ -60,13 +60,13 @@ resource "null_resource" "deploy" {
   }
   provisioner "remote-exec" {
     inline = [
-      "cd /home/ubuntu/cloud-1",
+      "cd /home/ubuntu/cloud",
       "docker compose up -d"
     ]
   }
 
   triggers = {
-    docker_compose_sha = filesha256("./cloud-1/docker-compose.yml")
+    docker_compose_sha = filesha256("./cloud/docker-compose.yml")
   }
 
   depends_on = [null_resource.create_directories]
@@ -147,7 +147,7 @@ resource "null_resource" "copy_directories" {
     host        = aws_instance.ubuntu_server.public_ip
   }
   provisioner "file" {
-    source      = "cloud-1"       # Local directory
+    source      = "cloud"       # Local directory
     destination = "/home/ubuntu/" # Remote directory
   }
   depends_on = [null_resource.install_docker]
@@ -164,7 +164,7 @@ resource "null_resource" "add_ip" {
 
   provisioner "remote-exec" {
     inline = [
-      "cd /home/ubuntu/cloud-1",
+      "cd /home/ubuntu/cloud",
       # Use the Terraform variable for public IP
       "export ip=${aws_instance.ubuntu_server.public_ip}",
       "echo \"DOMAIN_NAME=$ip\" >> .env",
