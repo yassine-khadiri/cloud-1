@@ -41,7 +41,6 @@ services:
       - cloud1-network
     depends_on:
       - wordpress
-    # entrypoint: ["/bin/bash", "-c", "chmod +x /tmp/ng-init.sh && /tmp/ng-init.sh"]
 
   wordpress:
     # image: wordpress:cloud1
@@ -60,8 +59,6 @@ services:
       - mysql
     networks:
       - cloud1-network
-    # entrypoint: ["/bin/sh", "-c"]
-    # command: ["chmod +x /tmp/wp-init.sh && /tmp/wp-init.sh"]
 
 volumes:
   db:

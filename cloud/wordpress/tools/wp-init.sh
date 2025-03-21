@@ -5,10 +5,6 @@ set -e
 # Set listening port
 sed -i 's/^listen = 127.0.0.1:9000/listen = 9000/' /usr/local/etc/php-fpm.d/www.conf
 
-# go to the WordPress directory
-# cd /var/www/html
-
-
 # Install WP-CLI
 wp_cli_path="/usr/local/bin/wp"
 if [ ! -f "$wp_cli_path" ]; then
@@ -21,8 +17,6 @@ fi
 if [ ! -f /var/www/html/wp-config.php ]; then
     # Create a new WordPress Configuration file
     cp wp-config-sample.php wp-config.php
-    # wp core download --allow-root --path=/var/www/html
-    # wp config create --allow-root 
 fi
 
 # Set WordPress configuration
