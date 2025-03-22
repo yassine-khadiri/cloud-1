@@ -2,7 +2,7 @@
 FROM nginx:1.25-bookworm
 
 # Create the SSL directory
-RUN mkdir /etc/nginx/ssl
+RUN mkdir -p /etc/nginx/ssl
 
 # Generate a self-signed SSL certificate
 RUN openssl req -newkey rsa:2048 -x509 -nodes -days 365  \
@@ -17,4 +17,4 @@ COPY conf/default.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80 443
 
 # Start NGINX
-CMD ["nginx", "-g", "daemon off;"]
+CMD [ "nginx", "-g", "daemon off;" ]

@@ -25,8 +25,6 @@ services:
       - cloud1-network
 
   nginx:
-    # image: nginx:cloud1
-    # image: nginx:1.25-bookworm
     build: nginx/
     container_name: nginx
     restart: always
@@ -35,16 +33,12 @@ services:
       - 443:443
     volumes:
       - "wordpress:/var/www/html"
-      # - "./nginx/default.conf:/tmp/default.conf"
-      # - "./nginx/tools/ng-init.sh:/tmp/ng-init.sh"
     networks:
       - cloud1-network
     depends_on:
       - wordpress
 
   wordpress:
-    # image: wordpress:cloud1
-    # image: wordpress:6.3-php8.2-fpm
     build: wordpress/
     container_name: wordpress
     restart: always
@@ -54,7 +48,6 @@ services:
       - .env
     volumes:
       - "wordpress:/var/www/html"
-      # - "./wordpress/tools/wp-init.sh:/tmp/wp-init.sh"
     depends_on:
       - mysql
     networks:
@@ -65,13 +58,13 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: /home/$USER/data/db
+      device: /home/ubuntu/data/db
       o: bind
   wordpress:
     driver: local
     driver_opts:
       type: none
-      device: /home/$USER/data/wordpress
+      device: /home/ubuntu/data/wordpress
       o: bind
 
 networks:

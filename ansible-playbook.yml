@@ -1,0 +1,74 @@
+- name: Configure Ubuntu Server
+  hosts: all
+  become: yes
+  tasks:
+
+    - name: Install required packages
+      apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+        state: present
+        update_cache: yes
+
+    - name: Add Docker GPG key
+      shell: |
+        install -m 0755 -d /etc/apt/keyrings
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | tee /etc/apt/keyrings/docker.asc > /dev/null
+        chmod a+r /etc/apt/keyrings/docker.asc
+
+    - name: Add Docker repository
+      shell: |
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+    - name: Install Docker and Docker Compose
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+        update_cache: yes
+
+    - name: Add user to docker group
+      user:
+        name: ubuntu
+        groups: docker
+        append: yes
+
+    - name: Create required directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: 0755
+      loop:
+        - /home/ubuntu/data/db
+        - /home/ubuntu/data/wordpress
+
+    - name: Copy application files
+      copy:
+        src: cloud/
+        dest: /home/ubuntu/cloud/
+        owner: ubuntu
+        group: ubuntu
+        mode: 0755
+
+    - name: Set public IP address
+      shell: |
+        export IP={{ public_ip }}
+        echo "DOMAIN_NAME=$IP" >> /home/ubuntu/cloud/.env
+        sed -i "s/server_name IP;/server_name $IP;/g" /home/ubuntu/cloud/nginx/conf/default.conf
+
+    # - name: Start Docker containers
+    #   community.docker.docker_compose_v2:
+    #     project_src: /home/ubuntu/cloud
+    #     state: present
+
+    - name: Start Docker containers
+      shell: |
+        cd /home/ubuntu/cloud && docker compose up -d
