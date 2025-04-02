@@ -1,0 +1,10 @@
+---
+- name: cloud-1
+  hosts: all
+  become: yes
+  roles:
+    - common  
+    - mysql
+    - nginx
+    - wordpress
+    - deploy

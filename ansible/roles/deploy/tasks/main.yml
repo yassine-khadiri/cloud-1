@@ -1,0 +1,6 @@
+---
+- name: Run Docker Compose
+  community.docker.docker_compose_v2:
+    project_src: /home/ubuntu/cloud-1
+    state: present
+  become: yes

@@ -1,0 +1,25 @@
+---
+- name: Create wordpress directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: 0755
+  loop:
+    - /home/ubuntu/cloud-1/data/wordpress
+    - /home/ubuntu/cloud-1/resources/wordpress
+    - /home/ubuntu/cloud-1/resources/wordpress/tools
+
+- name: Copy Wordpress Dockerfile to the remote host
+  copy:
+    src: ./Dockerfile
+    dest: /home/ubuntu/cloud-1/resources/wordpress
+
+- name: Copy Wordpress configuration file to the remote host
+  copy:
+    src: ./tools/wp-init.sh
+    dest: /home/ubuntu/cloud-1/resources/wordpress/tools/wp-init.sh
+    owner: ubuntu
+    group: ubuntu
+    mode: 0755

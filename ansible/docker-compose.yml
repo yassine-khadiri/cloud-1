@@ -3,20 +3,24 @@ services:
     image: mysql:8.0-oracle
     container_name: mysql
     restart: always
-    ports:
-      - 3306:3306
     env_file:
       - .env
     volumes:
       - "db:/var/lib/mysql"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s  
     networks:
       - cloud1-network
   phpmyadmin:
     image: phpmyadmin
     container_name: phpmyadmin
     restart: always
-    ports:
-      - 8081:80
+    expose:
+      - 80
     env_file:
       - .env
     depends_on:
@@ -24,20 +28,18 @@ services:
     networks:
       - cloud1-network
   nginx:
-    image: nginx:1.25-alpine
+    build: ./resources/nginx/.
     container_name: nginx
     restart: always
     ports:
       - 443:443
+      - 80:80
     volumes:
       - "wordpress:/var/www/html"
-      - "./content/nginx/default.conf:/etc/nginx/conf.d/default.conf"
-      - "./ssl/certs/certificate.crt:/etc/nginx/ssl/certificate.crt"
-      - "./ssl/private/private.key:/etc/nginx/ssl/private.key"
     networks:
       - cloud1-network
   wordpress:
-    image: wordpress:6.3-php8.2-fpm-alpine
+    build: ./resources/wordpress/.
     container_name: wordpress
     restart: always
     expose:
@@ -46,9 +48,15 @@ services:
       - .env
     volumes:
       - "wordpress:/var/www/html"
-      - "./content/wordpress/tools/wp-init.sh:/tmp/wp-init.sh"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
     networks:
       - cloud1-network
 
@@ -57,13 +65,13 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: /home/ubuntu/data/db
+      device: /home/ubuntu/cloud-1/data/db
       o: bind
   wordpress:
     driver: local
     driver_opts:
       type: none
-      device: /home/ubuntu/data/wordpress
+      device: /home/ubuntu/cloud-1/data/wordpress
       o: bind
 
 networks:

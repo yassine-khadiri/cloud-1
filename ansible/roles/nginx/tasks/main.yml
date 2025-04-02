@@ -1,0 +1,27 @@
+---
+- name: Create nginx directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: 0755
+  loop:
+    - /home/ubuntu/cloud-1/resources/nginx
+    - /home/ubuntu/cloud-1/resources/nginx/conf
+
+- name: Copy Nginx Dockerfile to the remote host
+  copy:
+    src: ./Dockerfile
+    dest: /home/ubuntu/cloud-1/resources/nginx
+    owner: ubuntu
+    group: ubuntu
+    mode: 0755
+
+- name: Copy nginx configuration file to the remote host
+  copy:
+    src: ./conf/default.conf
+    dest: /home/ubuntu/cloud-1/resources/nginx/conf/default.conf
+    owner: ubuntu
+    group: ubuntu
+    mode: 0755
