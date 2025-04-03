@@ -61,5 +61,5 @@ resource "null_resource" "encrypt_inventory" {
     EOT
   }
 
-  depends_on = [ aws_instance.cloud_1_instance ]
+  depends_on = [aws_instance.cloud_1_instance]
 }

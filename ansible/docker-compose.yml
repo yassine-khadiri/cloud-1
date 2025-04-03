@@ -7,24 +7,6 @@ services:
       - .env
     volumes:
       - "db:/var/lib/mysql"
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 30s  
-    networks:
-      - cloud1-network
-  phpmyadmin:
-    image: phpmyadmin
-    container_name: phpmyadmin
-    restart: always
-    expose:
-      - 80
-    env_file:
-      - .env
-    depends_on:
-      - mysql
     networks:
       - cloud1-network
   nginx:
@@ -36,6 +18,8 @@ services:
       - 80:80
     volumes:
       - "wordpress:/var/www/html"
+    depends_on:
+      - wordpress
     networks:
       - cloud1-network
   wordpress:
@@ -48,15 +32,8 @@ services:
       - .env
     volumes:
       - "wordpress:/var/www/html"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
     depends_on:
-      mysql:
-        condition: service_healthy
+      - mysql
     networks:
       - cloud1-network
 

@@ -3,6 +3,4 @@
   file:
     path: "/home/ubuntu/cloud-1/data/db"
     state: directory
-    owner: "999"
-    group: "999"
     mode: "0755"
