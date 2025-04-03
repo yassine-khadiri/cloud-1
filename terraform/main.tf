@@ -8,7 +8,7 @@ terraform {
 }
 
 provider "aws" {
-  region  = "eu-north-1"
+  region  = var.region
   profile = "default"
 }
 
@@ -34,8 +34,8 @@ resource "null_resource" "encrypt_key" {
 }
 
 resource "aws_instance" "cloud_1_instance" {
-  ami           = "ami-09a9858973b288bdd"
-  instance_type = "t3.micro"
+  ami           = var.ami_id
+  instance_type = var.instance_type
   key_name      = aws_key_pair.key_pair.key_name
 
   tags = {
