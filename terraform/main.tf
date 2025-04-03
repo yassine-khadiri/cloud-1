@@ -22,22 +22,6 @@ resource "aws_key_pair" "key_pair" {
   public_key = tls_private_key.rsa_4096.public_key_openssh
 }
 
-# Save encrypted private key locally
-# resource "null_resource" "encrypt_key" {
-#   provisioner "local-exec" {
-#     command = <<-EOT
-#       echo '${tls_private_key.rsa_4096.private_key_pem}' | \
-#       gpg --batch --passphrase "${var.gpg_passphrase}" \
-#           --symmetric --cipher-algo AES256 \
-#           --output "${var.key_name}.pem.gpg"
-#     EOT
-#   }
-# }
-
-# output "decrypt_command" {
-#   value = "gpg --decrypt ${var.key_name}.pem.gpg"
-# }
-
 # Save private key locally and encrypt with Ansible Vault
 resource "null_resource" "encrypt_key" {
   provisioner "local-exec" {
@@ -59,35 +43,23 @@ resource "aws_instance" "cloud_1_instance" {
   }
 }
 
-resource "local_file" "ansible_inventory" {
-  content = <<-EOT
-    [wordpress_servers]
+resource "null_resource" "encrypt_inventory" {
+  provisioner "local-exec" {
+    command = <<-EOT
+      echo '[wordpress_servers]
     ${aws_instance.cloud_1_instance.public_ip}
 
     [wordpress_servers:vars]
     ansible_user=ubuntu
     ansible_ssh_private_key_file=${abspath(path.module)}/${var.key_name}.pem
     ansible_python_interpreter=/usr/bin/python3
-  EOT
+    ' > "../ansible/inventory/${var.inventory_name}.ini"
 
-  filename = "../ansible/inventory/inventory.ini"
+      chmod 600 "../ansible/inventory/${var.inventory_name}.ini"
 
-  depends_on = [aws_instance.cloud_1_instance,null_resource.encrypt_key]
+      echo "${var.ansible_vault_password}" | ansible-vault encrypt --vault-password-file=/bin/cat "../ansible/inventory/${var.inventory_name}.ini"
+    EOT
+  }
+
+  depends_on = [ aws_instance.cloud_1_instance ]
 }
-
-#   provisioner "local-exec" {
-#     command = "echo \"DOMAIN_NAME=${self.public_ip}\" >> ./content/.env"
-#   }
-
-# resource "null_resource" "cleanup" {
-#   triggers = {
-#     instance_id = aws_instance.cloud_1_instance.id
-#   }
-
-#   provisioner "local-exec" {
-#     when    = destroy
-#     command = "sed -i '/DOMAIN_NAME=/d' ./content/.env"
-#   }
-
-#   depends_on = [aws_instance.cloud_1_instance]
-# }
