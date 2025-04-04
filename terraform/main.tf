@@ -43,6 +43,12 @@ resource "aws_instance" "cloud_1_instance" {
   }
 }
 
+resource "null_resource" "create_inventory_directory" {
+  provisioner "local-exec" {
+    command = "mkdir -p \"../ansible/inventory\""
+  }
+}
+
 resource "null_resource" "encrypt_inventory" {
   provisioner "local-exec" {
     command = <<-EOT
@@ -61,5 +67,8 @@ resource "null_resource" "encrypt_inventory" {
     EOT
   }
 
-  depends_on = [aws_instance.cloud_1_instance]
+  depends_on = [
+    aws_instance.cloud_1_instance,
+    null_resource.create_inventory_directory
+  ]
 }
