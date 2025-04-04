@@ -39,14 +39,12 @@ terraform.tfvars.json
 package-lock.json
 Pipfile.lock
 
-.env
-
 /ssl
 
 cloud.pem
 
 note.md
 
-.env
+# .env
 
 ansible/inventory/inventory.ini
